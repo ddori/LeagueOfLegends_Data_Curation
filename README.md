@@ -18,6 +18,7 @@
 ## 2) Data Sources & Scope
 
 - **SoloQ**: retrieved through the **Riot Games API** (returns **JSON** match payloads).
+- **Rate Limits**: 20 requests every 1 seconds(s), 100 requests every 2 minutes(s)
 - **Professional**: retrieved from **Oracle’s Elixir** (CSV).  
   In CI, these are standardized to the same schema for direct comparison with SoloQ.
 - **Time window**: **2025 H1** (Spring & Summer seasons).  
@@ -27,9 +28,9 @@
 
 ## 3) Ethics & Policy
 
-- **Riot API Policy & legal/ethical compliance**:  
+- **Riot API Policy & legal/ethical compliance**:  https://developer.riotgames.com/policies/general
   Only publicly available match data are collected. This project **follows Riot Games Developer Portal policies** (usage, rate limits, and ToS).  
-- **API key validity**: **Riot API keys expire roughly every 24 hours**. After expiration, **request a new key** from the Riot Developer Portal and re-run the workflow.
+- **API key validity**: **Riot API keys expire roughly every 24 hours**. After expiration, **request a new key** from the Riot Developer Portal and re-run the workflow. https://developer.riotgames.com/
 - **Secrets**: Never commit secrets. API keys must be provided through **GitHub Actions inputs** or local environment variables.
 
 ---
@@ -140,4 +141,5 @@ jupyter lab
 - **Riot Policies** https://developer.riotgames.com/policies/general
 - **Riot Games Developer Portal** https://developer.riotgames.com/docs/portal
 - **Oracle’s Elixir** https://oracleselixir.com/tools/downloads
+
 
