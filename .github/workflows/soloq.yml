@@ -42,13 +42,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests
+          pip install requests pandas pyarrow
 
       - name: Run SoloQ collector
         working-directory: SoloQ
         run: |
           python - << 'PY'
-          import os, importlib
+          import os
           from collector import collect_all_tiers
           import config
 
@@ -62,11 +62,44 @@ jobs:
 
           collect_all_tiers(max_pages_per_player=mpp)
           print(f"[Done] Output at: {config.OUT_DIR}")
+          # 출력 경로를 GitHub env로 넘긴다
+          print(f"SOL_OUT_DIR=SoloQ/{config.OUT_DIR}")
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+            f.write(f"SOL_OUT_DIR=SoloQ/{config.OUT_DIR}\n")
           PY
 
-      - name: Upload results
-        if: success()
+      - name: Show detected output folder
+        run: |
+          echo "Detected raw output: $SOL_OUT_DIR"
+          ls -al "$SOL_OUT_DIR" || true
+
+      - name: Run parser (create CSV & Parquet)
+        working-directory: SoloQ
+        run: |
+          if [ -f "parse.py" ]; then
+            python parse.py
+          else
+            echo " No parser script found (parse.py)."
+            exit 1
+          fi
+
+      - name: List parsed outputs
+        run: |
+          ls -al SoloQ/data || true
+
+      - name: Upload artifact (raw JSON)
         uses: actions/upload-artifact@v4
         with:
-          name: riot-output
-          path: SoloQ/output_1520_by_tier
+          name: soloq-raw-json
+          path: ${{ env.SOL_OUT_DIR }}
+          retention-days: 14
+
+      - name: Upload artifact (parsed dataset)
+        uses: actions/upload-artifact@v4
+        with:
+          name: soloq-parsed
+          path: |
+            SoloQ/data/*.csv
+            SoloQ/data/*.parquet
+          if-no-files-found: error
+          retention-days: 14
