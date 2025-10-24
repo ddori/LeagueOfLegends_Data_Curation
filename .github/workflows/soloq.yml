@@ -21,7 +21,6 @@ on:
 jobs:
   collect:
     runs-on: ubuntu-latest
-
     env:
       RIOT_API_KEY: ${{ inputs.riot_api_key }}
       MAX_PAGES_PER_PLAYER: ${{ inputs.max_pages_per_player }}
@@ -40,9 +39,10 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
+        working-directory: SoloQ
         run: |
           python -m pip install --upgrade pip
-          pip install requests pandas pyarrow
+          pip install -r requirements.txt
 
       - name: Run SoloQ collector
         working-directory: SoloQ
@@ -52,7 +52,6 @@ jobs:
           from collector import collect_all_tiers
           import config
 
-          # Apply workflow inputs (optional overrides)
           patch = os.getenv("PATCH_MM_OVERRIDE") or config.PATCH_MM
           mpp_raw = (os.getenv("MAX_PAGES_PER_PLAYER") or "").strip()
           mpp = int(mpp_raw) if mpp_raw.isdigit() else None
@@ -62,39 +61,31 @@ jobs:
 
           collect_all_tiers(max_pages_per_player=mpp)
           print(f"[Done] Output at: {config.OUT_DIR}")
-          # 출력 경로를 GitHub env로 넘긴다
-          print(f"SOL_OUT_DIR=SoloQ/{config.OUT_DIR}")
           with open(os.environ["GITHUB_ENV"], "a") as f:
-            f.write(f"SOL_OUT_DIR=SoloQ/{config.OUT_DIR}\n")
+              f.write(f"SOL_OUT_DIR=SoloQ/{config.OUT_DIR}\n")
           PY
 
-      - name: Show detected output folder
+      - name: Verify raw output
         run: |
           echo "Detected raw output: $SOL_OUT_DIR"
           ls -al "$SOL_OUT_DIR" || true
 
-      - name: Run parser (create CSV & Parquet)
+      - name: Run parser (CSV & Parquet)
         working-directory: SoloQ
-        run: |
-          if [ -f "parse.py" ]; then
-            python parse.py
-          else
-            echo " No parser script found (parse.py)."
-            exit 1
-          fi
+        run: python parse.py
 
       - name: List parsed outputs
-        run: |
-          ls -al SoloQ/data || true
+        working-directory: SoloQ
+        run: ls -al data || true
 
-      - name: Upload artifact (raw JSON)
+      - name: Upload raw JSON (artifact)
         uses: actions/upload-artifact@v4
         with:
           name: soloq-raw-json
           path: ${{ env.SOL_OUT_DIR }}
           retention-days: 14
 
-      - name: Upload artifact (parsed dataset)
+      - name: Upload parsed dataset (artifact)
         uses: actions/upload-artifact@v4
         with:
           name: soloq-parsed
