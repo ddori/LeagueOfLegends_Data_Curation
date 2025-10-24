@@ -1,33 +1,55 @@
-name: Download Pro Match Data by Year
+name: Get Pro Match data 
 
 on:
   workflow_dispatch:
     inputs:
       year:
-        description: "Enter year (e.g., 2025)"
+        description: "Year (e.g., 2025)"
         required: true
         default: "2025"
 
 jobs:
-  download-pro:
+  pro:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
 
-      - name: Install gdown
-        run: pip install gdown
+      - name: Install rclone
+        run: curl -fsSL https://rclone.org/install.sh | sudo bash
 
-      - name: Download file from Google Drive by year
+      - name: Configure rclone (Google Drive)
+        run: |
+          mkdir -p $HOME/.config/rclone
+          echo "${{ secrets.GDRIVE_SA_JSON }}" > $HOME/.config/rclone/sa.json
+          cat > $HOME/.config/rclone/rclone.conf <<'EOF'
+          [gdrv]
+          type = drive
+          scope = drive
+          service_account_file = /home/runner/.config/rclone/sa.json
+          root_folder_id = 1gLSw0RLjBbtaNy0dgnGQDAZOHIgCe-HH
+          EOF
+
+      - name: Download selected year CSV
         run: |
           mkdir -p data/pro_raw
           year=${{ github.event.inputs.year }}
-          file_name="${year}_LoL_esports_match_data_from_OraclesElixir.csv"
-          echo "Downloading file: $file_name"
-          gdown --folder "https://drive.google.com/drive/folders/1gLSw0RLjBbtaNy0dgnGQDAZOHIgCe-HH" -O data/pro_raw
-          mv data/pro_raw/$file_name data/pro_raw/pro_${year}.csv || echo "File not found for ${year}"
-      - name: List downloaded files
-        run: ls -al data/pro_raw
+          pattern="${year}_LoL_esports_match_data_from_OraclesElixir.csv"
+          rclone copy gdrv: data/pro_raw --include "${pattern}" -P
+          ls -al data/pro_raw
+
+      - name: Zip CSV
+        run: |
+          year=${{ github.event.inputs.year }}
+          cd data/pro_raw
+          tar -czf pro_${year}.tar.gz "${year}_LoL_esports_match_data_from_OraclesElixir.csv"
+          ls -al
+
+      - name: Upload artifact (pro CSV)
+        uses: actions/upload-artifact@v4
+        with:
+          name: pro_${{ github.event.inputs.year }}
+          path: |
+            data/pro_raw/pro_${{ github.event.inputs.year }}.tar.gz
+          if-no-files-found: error
+          retention-days: 14
