@@ -21,6 +21,7 @@ on:
 jobs:
   collect:
     runs-on: ubuntu-latest
+
     env:
       RIOT_API_KEY: ${{ inputs.riot_api_key }}
       MAX_PAGES_PER_PLAYER: ${{ inputs.max_pages_per_player }}
@@ -29,20 +30,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
+      - name: Mask API key in logs
+        run: echo "::add-mask::${{ inputs.riot_api_key }}"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install dependencies
-        working-directory: SoloQ
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          
-      - name: Mask API key in logs
-        run: echo "::add-mask::${{ inputs.riot_api_key }}"
 
       - name: Run SoloQ collector
         working-directory: SoloQ
