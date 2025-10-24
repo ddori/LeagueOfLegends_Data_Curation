@@ -1,4 +1,4 @@
-# League of Legends 2025 H1 — SoloQ & Pro Data Curation, Parsing, and Analysis
+# League of Legends — SoloQ & Pro Data Curation
 
 > End-to-end project that **acquires**, **parses**, and **analyzes** League of Legends data for **2025 Spring/Summer (H1)** from both **SoloQ** and **professional** play, producing analysis-ready tables and reproducible visualizations.
 
@@ -7,7 +7,7 @@
 ## 1) Overview
 
 - **Goal**: collect SoloQ and professional match data for 2025 H1, transform everything into **analysis-ready DataFrames**, and expose **clear visual analyses** (e.g., DPM/GPM by tier, SoloQ vs Pro comparisons).
-- **Why this repo**: You can run acquisition in the cloud via **GitHub Actions**, or locally. The pipeline follows the **USGS Data Life Cycle** (Acquisition → Processing → Analysis → Preservation/Publishing).
+- **Why this repo**: You can run acquisition in the cloud via **GitHub Actions**, or locally. The pipeline follows the **USGS Data Life Cycle** (Acquisition → Processing → Analysis → Preservation/Publishing). https://github.com/ddori/UIUC_DataCuration/actions
 - **Included visualization**: see notebooks that reproduce plots like:
 
 <img width="989" height="490" alt="image" src="https://github.com/user-attachments/assets/931fa0a7-05ec-45f1-93db-7e56b5ed2480" />
@@ -47,9 +47,8 @@
   - `requests` (SoloQ acquisition)
   - `pandas`
   - `pyarrow` (Parquet write/read)
-  - `duckdb` or `polars` (optional for heavy joins)
   - `matplotlib` / `plotly` (visualization)
-  - `jupyter` (run notebooks in `analysis/`)
+  - `jupyter` (run notebooks)
   
   > Exact versions are pinned in `requirements.txt`.
 
@@ -141,3 +140,4 @@ jupyter lab
 - **Riot Policies** https://developer.riotgames.com/policies/general
 - **Riot Games Developer Portal** https://developer.riotgames.com/docs/portal
 - **Oracle’s Elixir** https://oracleselixir.com/tools/downloads
+
