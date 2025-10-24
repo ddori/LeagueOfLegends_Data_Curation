@@ -40,7 +40,6 @@
 - **Python**: `3.11`
 - **Install**:
   ```bash
-  # from repo root (requirements.txt is at the root)
   python -m pip install --upgrade pip
   pip install -r requirements.txt
   ```
@@ -141,5 +140,6 @@ jupyter lab
 - **Riot Policies** https://developer.riotgames.com/policies/general
 - **Riot Games Developer Portal** https://developer.riotgames.com/docs/portal
 - **Oracle’s Elixir** https://oracleselixir.com/tools/downloads
+
 
 
