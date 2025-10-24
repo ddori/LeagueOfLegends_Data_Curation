@@ -1,4 +1,4 @@
-# SoloQ/merge_all_jsons.py
+# SoloQ/parse.py
 import os, json, re
 import pandas as pd
 
@@ -149,7 +149,7 @@ def save_outputs(df, patch_tag):
     parquet_path = f"data/soloq_full_{patch_tag}.parquet"
 
     df.to_csv(csv_path, index=False, encoding="utf-8-sig")
-    print(f"✅ CSV saved: {csv_path}")
+    print(f"CSV saved: {csv_path}")
 
     if HAS_ARROW:
         table = pa.Table.from_pandas(df, preserve_index=False)
@@ -160,15 +160,13 @@ def save_outputs(df, patch_tag):
 
 
 if __name__ == "__main__":
-    base_candidates = [
-        d for d in os.listdir("SoloQ")
-        if d.startswith("output_") and d.endswith("_by_tier")
-    ]
+    # 자동 탐지: output_*_by_tier
+    base_candidates = [d for d in os.listdir(".") if d.startswith("output_") and d.endswith("_by_tier")]
     if not base_candidates:
-        raise FileNotFoundError("No 'output_*_by_tier' folder found in SoloQ/")
-    base_dir = os.path.join("SoloQ", base_candidates[0])
-    patch_tag = base_candidates[0].replace("output_", "").replace("_by_tier", "")
-    print(f"🔍 Detected base: {base_dir} (PATCH={patch_tag})")
+        raise FileNotFoundError("No 'output_*_by_tier' folder found in current directory.")
+    base_dir = base_candidates[0]
+    patch_tag = base_dir.replace("output_", "").replace("_by_tier", "")
+    print(f"🔍 Detected base_dir={base_dir} (PATCH={patch_tag})")
 
     df = build_dataframe(base_dir)
     print(f"DataFrame shape: {df.shape}")
