@@ -1,0 +1,60 @@
+{
+  "@context": "https://schema.org/",
+  "@type": "Dataset",
+  "name": "League of Legends Unified SoloQ–Professional Gameplay Dataset",
+  "description": "A curated dataset integrating Riot API SoloQ timeline data with Oracle’s Elixir professional match statistics. The dataset harmonizes participant-level metrics across roles, tiers, and patches using a unified schema for cross-environment gameplay comparison.",
+  "keywords": [
+    "League of Legends",
+    "Esports",
+    "SoloQ",
+    "Professional play",
+    "Gameplay analytics",
+    "Data curation",
+    "Riot API",
+    "Oracle’s Elixir"
+  ],
+  "creator": {
+    "@type": "Person",
+    "name": "Juhwan Song",
+    "affiliation": "University of Illinois Urbana-Champaign"
+  },
+  "license": "Raw Riot API and Oracle’s Elixir data are not redistributed. Derived metrics only.",
+  "version": "1.0",
+  "dateCreated": "2025-11-30",
+  "variableMeasured": [
+    "damagePerMinute",
+    "goldPerMinute",
+    "killParticipation",
+    "visionScorePerMinute",
+    "laneDifferentials",
+    "objectiveParticipation",
+    "patchVersion",
+    "role",
+    "tier",
+    "datasetType"
+  ],
+  "distribution": [
+    {
+      "@type": "DataDownload",
+      "encodingFormat": "CSV",
+      "contentUrl": "https://github.com/your-repo/unified_dataset.csv"
+    },
+    {
+      "@type": "DataDownload",
+      "encodingFormat": "Parquet",
+      "contentUrl": "https://github.com/your-repo/unified_dataset.parquet"
+    }
+  ],
+  "sourceOrganization": [
+    {
+      "@type": "Organization",
+      "name": "Riot Games",
+      "url": "https://developer.riotgames.com"
+    },
+    {
+      "@type": "Organization",
+      "name": "Oracle’s Elixir",
+      "url": "https://oracleselixir.com"
+    }
+  ]
+}
