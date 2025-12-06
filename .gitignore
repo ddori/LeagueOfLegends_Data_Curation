@@ -41,9 +41,9 @@ dist/
 .eggs/
 
 # Raw Riot API outputs (large files)
-output_*_by_tier/
-data/raw/
-*.json
+# output_*_by_tier/
+# data/raw/
+# *.json
 
 # Data files (optional)
 *.csv
