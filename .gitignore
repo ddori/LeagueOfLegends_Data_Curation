@@ -1,0 +1,59 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE settings
+.vscode/
+.idea/
+
+# Streamlit
+.streamlit/
+logs/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+*.env
+.env.local
+.env.*.local
+
+# Build and distribution
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Raw Riot API outputs (large files)
+output_*_by_tier/
+data/raw/
+*.json
+
+# Data files (optional)
+*.csv
+*.parquet
+
+# If you want to keep a specific CSV, uncomment:
+# !unified_pro_soloq_with_metrics.csv
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+*.bak

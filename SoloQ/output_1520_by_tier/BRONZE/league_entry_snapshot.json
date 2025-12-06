@@ -1,14 +1,14 @@
 {
-  "leagueId": "ec9291d6-da9c-4ce8-b57b-ceea5a467fe9",
+  "leagueId": "3bde067b-8689-4ce4-9b9e-175323e1e5b9",
   "queueType": "RANKED_SOLO_5x5",
   "tier": "BRONZE",
   "rank": "III",
-  "puuid": "4r3YXxg5WqjkJVRaLleD5AEhvuJGOVUgJEHXI7MXX_qRCV4i0CY56krmW7jo4QV7JpqESwVHQmXxBw",
-  "leaguePoints": 84,
-  "wins": 11,
-  "losses": 10,
+  "puuid": "ROxkaTK7SqZT5tYmU27Ql-6Fw8KViJpZDuxiEPIVkvPZzNFfE2gqRhsqLli_tdLsbDGOOWqz3CdwxA",
+  "leaguePoints": 99,
+  "wins": 17,
+  "losses": 12,
   "veteran": false,
   "inactive": false,
   "freshBlood": false,
-  "hotStreak": false
+  "hotStreak": true
 }
