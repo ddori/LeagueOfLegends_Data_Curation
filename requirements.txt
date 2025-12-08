@@ -8,3 +8,4 @@ streamlit
 prov
 pydot
 graphviz
+plotly
