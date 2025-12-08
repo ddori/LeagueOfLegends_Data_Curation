@@ -116,16 +116,18 @@ jobs:
           path: SoloQ/data/soloq_clean_*.csv
           retention-days: 7
 
-  pro-download-clean:
+    pro-download-clean:
     runs-on: ubuntu-latest
 
     env:
       PRO_GDRIVE_URL: ${{ inputs.pro_gdrive_url }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -138,32 +140,41 @@ jobs:
         run: |
           mkdir -p pro/data
           echo "[Run] Downloading Pro CSV from ${PRO_GDRIVE_URL}"
-          gdown --fuzzy "${PRO_GDRIVE_URL}" -O pro/data/pro_raw.csv
-          echo "[Check] HEAD of Pro CSV"
-          head -n 5 pro/data/pro_raw.csv || true
+          # clean.py가 기대하는 EXACT 경로/파일명으로 저장
+          gdown --fuzzy "${PRO_GDRIVE_URL}" \
+            -O pro/data/2025_LoL_esports_match_data_from_OraclesElixir.csv
+          echo "==== ls pro/data ===="
+          ls -al pro/data
+          echo "==== head ===="
+          head -n 5 pro/data/2025_LoL_esports_match_data_from_OraclesElixir.csv || true
 
-      # Safety check: fail early if not CSV
       - name: Validate Pro CSV header
         run: |
-          echo "[Validate] Checking if file looks like CSV"
-          if grep -q "<html" pro/data/pro_raw.csv; then
+          FILE=pro/data/2025_LoL_esports_match_data_from_OraclesElixir.csv
+          echo "[Validate] Checking if file looks like CSV: $FILE"
+          if grep -qi "<html" "$FILE"; then
             echo "::error::Downloaded file is HTML instead of CSV"
+            head -n 20 "$FILE" || true
             exit 1
           fi
-          if head -n 1 pro/data/pro_raw.csv | grep -q -E "gameid|league|split"; then
+          # Oracle's Elixir 헤더 체크 (gameid, league 등)
+          if head -n 1 "$FILE" | grep -q -E "gameid,.*league,.*year"; then
             echo "[OK] CSV header valid"
           else
             echo "::error::CSV header looks invalid"
-            head -n 10 pro/data/pro_raw.csv
+            head -n 5 "$FILE"
             exit 1
           fi
 
       - name: Run Pro clean
         working-directory: pro
         run: |
-          python clean.py pro/data/pro_raw.csv
+          echo "[Run] Pro clean"
+          # clean.py 안에서 RAW_PATH = "./data/2025_LoL_esports_match_data_from_OraclesElixir.csv" 사용
+          python clean.py
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload cleaned Pro
+        uses: actions/upload-artifact@v4
         with:
           name: pro-clean-2025
           path: pro/data/pro_2025_cleaned.csv
