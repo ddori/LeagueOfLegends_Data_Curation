@@ -13,7 +13,7 @@ on:
         default: "15.24"
         type: string
       pro_gdrive_url:
-        description: "Google Drive link for Pro CSV (single file)"
+        description: "Google Drive link for Pro CSV (view link OK)"
         required: true
         type: string
 
@@ -26,11 +26,9 @@ jobs:
       PATCH_MM: ${{ inputs.patch_mm }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -45,8 +43,7 @@ jobs:
           echo "[Run] SoloQ acquire with PATCH_MM=${PATCH_MM}"
           python acquire.py
 
-      - name: Upload SoloQ raw JSON
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: soloq-raw-${{ inputs.patch_mm }}
           path: SoloQ/output_*_by_tier
@@ -57,21 +54,17 @@ jobs:
     needs: soloq-acquire
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
+      - run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Download SoloQ raw JSON
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: soloq-raw-${{ inputs.patch_mm }}
           path: SoloQ
@@ -79,11 +72,9 @@ jobs:
       - name: Run SoloQ parse
         working-directory: SoloQ
         run: |
-          echo "[Run] SoloQ parse"
           python parse.py
 
-      - name: Upload parsed SoloQ CSV
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: soloq-parsed-${{ inputs.patch_mm }}
           path: |
@@ -99,21 +90,17 @@ jobs:
       PATCH_MM: ${{ inputs.patch_mm }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
+      - run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Download parsed SoloQ
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: soloq-parsed-${{ inputs.patch_mm }}
           path: SoloQ/data
@@ -121,11 +108,9 @@ jobs:
       - name: Run SoloQ clean
         working-directory: SoloQ
         run: |
-          echo "[Run] SoloQ clean with PATCH_MM=${PATCH_MM}"
           python clean.py
 
-      - name: Upload cleaned SoloQ
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: soloq-clean-${{ inputs.patch_mm }}
           path: SoloQ/data/soloq_clean_*.csv
@@ -138,11 +123,9 @@ jobs:
       PRO_GDRIVE_URL: ${{ inputs.pro_gdrive_url }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -155,19 +138,32 @@ jobs:
         run: |
           mkdir -p pro/data
           echo "[Run] Downloading Pro CSV from ${PRO_GDRIVE_URL}"
-          # Save with the filename that pro/clean script expects
-          gdown "${PRO_GDRIVE_URL}" -O pro/data/2025_LoL_esports_match_data_from_OraclesElixir.csv
-          ls -al pro/data
+          gdown --fuzzy "${PRO_GDRIVE_URL}" -O pro/data/pro_raw.csv
+          echo "[Check] HEAD of Pro CSV"
+          head -n 5 pro/data/pro_raw.csv || true
+
+      # Safety check: fail early if not CSV
+      - name: Validate Pro CSV header
+        run: |
+          echo "[Validate] Checking if file looks like CSV"
+          if grep -q "<html" pro/data/pro_raw.csv; then
+            echo "::error::Downloaded file is HTML instead of CSV"
+            exit 1
+          fi
+          if head -n 1 pro/data/pro_raw.csv | grep -q -E "gameid|league|split"; then
+            echo "[OK] CSV header valid"
+          else
+            echo "::error::CSV header looks invalid"
+            head -n 10 pro/data/pro_raw.csv
+            exit 1
+          fi
 
       - name: Run Pro clean
         working-directory: pro
         run: |
-          echo "[Run] Pro clean"
-          # If your clean script name is different, adjust here
-          python clean.py
+          python clean.py pro/data/pro_raw.csv
 
-      - name: Upload cleaned Pro
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: pro-clean-2025
           path: pro/data/pro_2025_cleaned.csv
@@ -183,38 +179,31 @@ jobs:
       PATCH_MM: ${{ inputs.patch_mm }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
+      - run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Download cleaned SoloQ
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: soloq-clean-${{ inputs.patch_mm }}
           path: SoloQ/data
 
-      - name: Download cleaned Pro
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: pro-clean-2025
           path: pro/data
 
       - name: Run unified builder
         run: |
-          echo "[Run] unified.py"
           python unified.py
 
-      - name: Upload unified dataset
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: unified-${{ inputs.patch_mm }}
           path: unified_pro_soloq_with_metrics.csv
@@ -225,26 +214,21 @@ jobs:
     needs: unify
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
+      - run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt streamlit
 
-      - name: Download unified dataset
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: unified-${{ inputs.patch_mm }}
           path: .
 
       - name: Sanity check app.py
         run: |
-          # Basic syntax/import check; we do not actually run Streamlit server in CI
           python -m py_compile app.py
