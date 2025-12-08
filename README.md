@@ -275,14 +275,31 @@ Artifacts are automatically passed between jobs.
 
 Each step is independent and follows the same local logic.
 
+## 6. Analysis
+
+All data exploration and comparison notebooks are stored in the `analysis/` folder.
+
+The notebooks included are:
+
+- `soloq_analysis_visualization.ipynb`  
+  Visualization and exploration of cleaned SoloQ data. Includes distribution checks, metric validation, and patch filtering verification.
+
+- `pro_2025_analysis.ipynb`  
+  Analysis of professional match data provided by Oracle's Elixir, including feature validation and metric alignment.
+
+- `soloq_pro_comparison.ipynb`  
+  The primary analysis notebook comparing SoloQ and professional match data across all tiers. Generates tier progression plots, distribution comparisons, and unified schema validation needed for the dashboard.
+  
+These notebooks complement the automated pipeline and provide deeper insight into how derived metrics behave across sampling groups.
+
 ---
 
-## 6. Provenance & Reproducibility
+## 7. Provenance & Reproducibility
 <img width="3221" height="817" alt="provenance" src="https://github.com/user-attachments/assets/9e76391b-1526-4a65-bcfb-0d7963148c91" />
 
 This project includes full **data provenance tracking** to ensure the entire dataset creation process is **transparent**, **verifiable**, and **reproducible**.
 
-### 6.1 Provenance Graph
+### 7.1 Provenance Graph
 - `provenance.py` can generate a provenance graph following the structure of the **USGS Science Data Lifecycle**
 - The pipeline captures:
   - **Acquisition** → Riot API sampling
@@ -305,23 +322,7 @@ Every value in the unified dataset can be traced back to:
 
 ---
 
-## 7. Notebooks
-
-Included examples:
-
-- **SoloQ analysis**
-- **Pro-only analysis (2025)**
-- **SoloQ vs Pro comparison**  
-  (same metrics across tiers)
-
-They assume:
-- Clean SoloQ CSV
-- Clean Pro CSV
-- Unified.csv exists
-
----
-
-## 8. Acknowledgments
+## 7. Acknowledgments
 
 - **Riot Games Developer Portal**  
   https://developer.riotgames.com/
