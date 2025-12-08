@@ -5,6 +5,8 @@ A fully automated pipeline for acquiring, parsing, cleaning, and unifying **Leag
 ---
 
 ## 1. Overview
+Visualization web page: https://leagueoflegendsdatacuration-fzrwfnhahjerhhwaqterfj.streamlit.app
+
 <img width="2318" height="1171" alt="image" src="https://github.com/user-attachments/assets/cec03fa1-2120-4ff2-ba72-ef92bb7df1c8" />
 
 **Goal**  
