@@ -174,10 +174,10 @@ def collect_one_tier(
     print(f"✅ Done {tier} → {tier_dir}")
 
 def collect_all_tiers(max_pages_per_player=None):
-    # tiers = ["IRON","BRONZE","SILVER","GOLD","PLATINUM","EMERALD",
-    #          "DIAMOND","MASTER","GRANDMASTER","CHALLENGER"]
-    tiers = ["BRONZE","SILVER","GOLD","PLATINUM","EMERALD",
-             "DIAMOND","MASTER","GRANDMASTER"]
+    tiers = ["IRON","BRONZE","SILVER","GOLD","PLATINUM","EMERALD",
+             "DIAMOND","MASTER","GRANDMASTER","CHALLENGER"]
+    # tiers = ["BRONZE","SILVER","GOLD","PLATINUM","EMERALD",
+    #          "DIAMOND","MASTER","GRANDMASTER"]
     
     for t in tiers:
         try:

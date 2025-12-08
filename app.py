@@ -3,10 +3,6 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 
-# --------------------------------
-# 기본 설정
-# --------------------------------
-
 st.set_page_config(
     page_title="LoL Unified Dashboard",
     layout="wide",
@@ -56,7 +52,6 @@ METRIC_LABEL = {
     "lane_pressure_index": "Lane Pressure Index (|Δ|)",
 }
 
-# 라인차트에 기본으로 볼 Metric들
 LINE_METRICS = [
     "dpm",
     "gpm",
@@ -68,10 +63,6 @@ LINE_METRICS = [
 
 METRIC_OPTIONS = list(METRIC_LABEL.keys())
 
-
-# --------------------------------
-# 데이터 로드 & 전처리
-# --------------------------------
 
 @st.cache_data
 def load_unified(path: str = "unified_pro_soloq_with_metrics.csv") -> pd.DataFrame:
@@ -112,15 +103,12 @@ if df.empty:
     st.stop()
 
 
-# --------------------------------
-# Sidebar: Role 멀티 셀렉트만
-# --------------------------------
 
 st.sidebar.title("⚙️ Controls")
 
 roles_available = sorted(df["role"].dropna().unique().tolist())
 selected_roles = st.sidebar.multiselect(
-    "Role 선택 (복수 선택 가능)",
+    "Role select",
     roles_available,
     default=roles_available,
 )
@@ -130,7 +118,7 @@ if selected_roles:
     df_f = df_f[df_f["role"].isin(selected_roles)]
 
 if df_f.empty:
-    st.warning("선택한 Role 조합에 해당하는 데이터가 없습니다.")
+    st.warning("No data")
     st.stop()
 
 
@@ -183,7 +171,7 @@ def tier_agg_mean_std(df_in: pd.DataFrame, metric: str) -> pd.DataFrame:
 # 라인 그래프: Tier vs Metric (mean ± std)
 # --------------------------------
 
-st.subheader("📈 Tier Progression (평균 + 표준편차)")
+st.subheader("📈 Tier Progression)")
 
 # 존재하는 metric만 사용
 metrics_for_line = [m for m in LINE_METRICS if m in df_f.columns]
@@ -199,7 +187,7 @@ else:
             g = tier_agg_mean_std(df_f, metric)
 
             if g.empty:
-                st.info(f"{METRIC_LABEL.get(metric, metric)}: 사용 가능한 값이 없습니다.")
+                st.info(f"{METRIC_LABEL.get(metric, metric)}: No value.")
                 continue
 
             fig = px.line(
@@ -227,17 +215,17 @@ available_metrics_for_box = [
 ]
 
 if not available_metrics_for_box:
-    st.info("Boxplot에 사용할 수 있는 Metric이 없습니다.")
+    st.info("No metric.")
 else:
     metric_box = st.selectbox(
-        "Boxplot에 사용할 Metric 선택",
+        "Select Metric",
         available_metrics_for_box,
         format_func=lambda x: METRIC_LABEL.get(x, x),
     )
 
     df_box = df_f.dropna(subset=["tier", metric_box]).copy()
     if df_box.empty:
-        st.info(f"{METRIC_LABEL.get(metric_box, metric_box)}: 유효한 데이터가 없습니다.")
+        st.info(f"{METRIC_LABEL.get(metric_box, metric_box)}: No data.")
     else:
         # ✅ 티어 순서 고정: IRON → ... → PRO
         df_box["tier"] = df_box["tier"].astype(str).str.upper()

@@ -1,0 +1,145 @@
+name: Build Unified LoL Dataset
+
+on:
+  workflow_dispatch:
+    inputs:
+      riot_api_key:
+        description: "Riot API key (valid ~24h)"
+        required: true
+        type: string
+      patch_mm:
+        description: "Patch prefix for SoloQ (e.g. 15.24)"
+        required: true
+        default: "15.24"
+        type: string
+      year:
+        description: "Pro data year (e.g. 2025)"
+        required: true
+        default: "2025"
+        type: string
+      max_pages_per_player:
+        description: "Optional: limit pages per SoloQ player (e.g. 2). Empty = full."
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  build-unified:
+    runs-on: ubuntu-latest
+
+    env:
+      RIOT_API_KEY: ${{ inputs.riot_api_key }}
+      PATCH_MM: ${{ inputs.patch_mm }}
+      YEAR: ${{ inputs.year }}
+      MAX_PAGES_PER_PLAYER: ${{ inputs.max_pages_per_player }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Mask API key in logs
+        run: echo "::add-mask::${{ inputs.riot_api_key }}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f "requirements.txt" ]; then
+            pip install -r requirements.txt
+          fi
+          pip install gdown streamlit
+
+      # ----------------------------------------------------
+      # 1) Download Pro raw CSV for the given year
+      # ----------------------------------------------------
+      - name: Download Pro raw CSVs from Google Drive
+        run: |
+          mkdir -p pro/data
+          gdown --folder "https://drive.google.com/drive/folders/1gLSw0RLjBbtaNy0dgnGQDAZOHIgCe-HH" -O pro/data
+          echo "Listing files in pro/data:"
+          ls -al pro/data
+
+          year="${YEAR}"
+          raw_name="${year}_LoL_esports_match_data_from_OraclesElixir.csv"
+          echo "Looking for file: ${raw_name}"
+
+          if [ ! -f "pro/data/${raw_name}" ]; then
+            echo "ERROR: File not found: pro/data/${raw_name}"
+            echo "Available files:"
+            ls -al pro/data
+            exit 1
+          fi
+
+          # Optionally delete other files to keep the folder clean
+          find pro/data -type f ! -name "${raw_name}" -delete
+
+          echo "Remaining Pro raw file:"
+          ls -al pro/data
+
+      # ----------------------------------------------------
+      # 2) SoloQ: acquire → parse → clean
+      # ----------------------------------------------------
+      - name: Run SoloQ acquire / parse / clean
+        working-directory: SoloQ
+        run: |
+          echo "[SoloQ] Using PATCH_MM=${PATCH_MM}"
+          echo "[SoloQ] acquire.py"
+          python acquire.py
+
+          echo "[SoloQ] parse.py"
+          python parse.py
+
+          echo "[SoloQ] clean.py"
+          python clean.py
+
+          echo "[SoloQ] data folder contents:"
+          ls -al data || true
+
+      # ----------------------------------------------------
+      # 3) Pro: clean
+      # ----------------------------------------------------
+      - name: Run Pro clean
+        working-directory: pro
+        run: |
+          echo "[Pro] clean.py"
+          python clean.py
+          echo "[Pro] data folder contents:"
+          ls -al data || true
+
+      # ----------------------------------------------------
+      # 4) Unified: build combined dataset
+      # ----------------------------------------------------
+      - name: Build unified dataset
+        run: |
+          echo "[Unified] Running unified.py"
+          python unified.py
+          echo "[Unified] Checking output:"
+          ls -al
+
+      # ----------------------------------------------------
+      # 5) Upload unified CSV as artifact
+      # ----------------------------------------------------
+      - name: Upload unified dataset artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified_pro_soloq_with_metrics
+          path: unified_pro_soloq_with_metrics.csv
+          if-no-files-found: error
+          retention-days: 14
+
+      # ----------------------------------------------------
+      # 6) Streamlit app smoke test
+      # ----------------------------------------------------
+      - name: Smoke test Streamlit app
+        run: |
+          echo "[App] Starting Streamlit app in headless mode"
+          python -m streamlit run app.py --server.headless true --server.port 8501 &
+          PID=$!
+          # Give the app a bit of time to start and import everything
+          sleep 15
+          echo "[App] Stopping Streamlit app (PID=$PID)"
+          kill $PID || true
