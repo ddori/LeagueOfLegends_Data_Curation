@@ -278,6 +278,7 @@ Each step is independent and follows the same local logic.
 ---
 
 ## 6. Provenance & Reproducibility
+<img width="3221" height="817" alt="provenance" src="https://github.com/user-attachments/assets/9e76391b-1526-4a65-bcfb-0d7963148c91" />
 
 This project includes full **data provenance tracking** to ensure the entire dataset creation process is **transparent**, **verifiable**, and **reproducible**.
 
