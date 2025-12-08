@@ -1,145 +1,334 @@
 # League of Legends — SoloQ & Pro Data Curation
 
-> End-to-end project that **acquires**, **parses**, and **analyzes** League of Legends data for **2025 Spring/Summer (H1)** from both **SoloQ** and **professional** play, producing analysis-ready tables and reproducible visualizations.
+A fully automated pipeline for acquiring, parsing, cleaning, and unifying **League of Legends SoloQ and professional match data** into a single analysis-ready dataset. The final output enables **tier-wise comparison** between ranked SoloQ (IRON → CHALLENGER) and professional matches (PRO), supported by a reproducible GitHub Actions workflow and an interactive Streamlit dashboard.
 
 ---
 
-## 1) Overview
+## 1. Overview
 
-- **Goal**: collect SoloQ and professional match data for 2025 H1, transform everything into **analysis-ready DataFrames**, and expose **clear visual analyses** (e.g., DPM/GPM by tier, SoloQ vs Pro comparisons).
-- **Why this repo**: You can run acquisition in the cloud via **GitHub Actions**, or locally. The pipeline follows the **USGS Data Life Cycle** (Acquisition → Processing → Analysis → Preservation/Publishing). https://github.com/ddori/UIUC_DataCuration/actions
-- **Included visualization**: see notebooks that reproduce plots like:
+**Goal**  
+Provide a unified dataset that highlights how player behavior, combat patterns, economy, objective control, and vision metrics change as skill increases from SoloQ to professional play.
 
-<img width="989" height="490" alt="image" src="https://github.com/user-attachments/assets/931fa0a7-05ec-45f1-93db-7e56b5ed2480" />
-<img width="989" height="490" alt="image" src="https://github.com/user-attachments/assets/178bf148-2018-4f57-a673-a095fad3d998" />
-
----
-
-## 2) Data Sources & Scope
-
-- **SoloQ**: retrieved through the **Riot Games API** (returns **JSON** match payloads).
-- **Rate Limits**: 20 requests every 1 seconds(s), 100 requests every 2 minutes(s)
-- **Professional**: retrieved from **Oracle’s Elixir** (CSV).  
-  In CI, these are standardized to the same schema for direct comparison with SoloQ.
-- **Time window**: **2025 H1** (Spring & Summer seasons).  
-  For SoloQ, matches are restricted to **Patch 15.15–15.20** to align with the same period.
-
----
-
-## 3) Ethics & Policy
-
-- **Riot API Policy & legal/ethical compliance**:  https://developer.riotgames.com/policies/general
-  Only publicly available match data are collected. This project **follows Riot Games Developer Portal policies** (usage, rate limits, and ToS).  
-- **API key validity**: **Riot API keys expire roughly every 24 hours**. After expiration, **request a new key** from the Riot Developer Portal and re-run the workflow. https://developer.riotgames.com/
-- **Secrets**: Never commit secrets. API keys must be provided through **GitHub Actions inputs** or local environment variables.
-
----
-
-## 4) Environment & Requirements
-
-- **Python**: `3.11`
-- **Install**:
-  ```bash
-  python -m pip install --upgrade pip
-  pip install -r requirements.txt
+**Main Outputs**
+- Cleaned SoloQ player-level dataset  
+- Cleaned Pro player-level dataset  
+- Unified dataset with derived metrics:
   ```
-- Typical packages used:
-  - `requests` (SoloQ acquisition)
-  - `pandas`
-  - `pyarrow` (Parquet write/read)
-  - `matplotlib` / `plotly` (visualization)
-  - `jupyter` (run notebooks)
-  
-  > Exact versions are pinned in `requirements.txt`.
+  unified_pro_soloq_with_metrics.csv
+  ```
+- Interactive dashboard:
+  ```
+  streamlit run app.py
+  ```
+
+**Execution Options**
+- Local execution (Python 3.11)
+- Reproducible CI execution with:
+  ```
+  .github/workflows/unified_lol.yml
+  ```
 
 ---
 
-## 5) How the Pipeline Works
+## 2. Repository Structure
 
-### Acquisition (SoloQ)
-1. **Riot API** is called for match lists and match details.
-2. Results are saved under `SoloQ/output_<patch>_by_tier/<TIER>/matches/*.json`.
-
-### Processing / Parsing
-1. `SoloQ/parse.py` scans `output_<patch>_by_tier` automatically.
-2. It flattens all available fields including stats, runes, challenges, and team data.
-3. It writes both:
-   - CSV: `SoloQ/data/soloq_full_<patch>.csv`
-   - Parquet: `SoloQ/data/soloq_full_<patch>.parquet`
-
-### Analysis
-- In `analysis`, you will find notebooks for:
-  - **SoloQ** analysis
-  - **Pro** analysis
-  - **Comparison** (SoloQ vs Pro tier analysis)
-
----
-
-## 6) GitHub Actions (CI)
-
-- **SoloQ workflow**: **Actions → Get SoloQ data** https://github.com/ddori/UIUC_DataCuration/actions/workflows/soloq.yml
-  <img width="1295" height="594" alt="image" src="https://github.com/user-attachments/assets/fd41db24-33bc-49ea-811d-6ccb63da1f5a" />
-
-  **Inputs**:
-  - `riot_api_key` (required, masked in logs)
-  - `max_pages_per_player` (optional limit)
-  - `patch_mm` (e.g., `15.20`)
-
-  **Artifacts produced**:
-  - `soloq-raw-json`: the raw JSON output at `SoloQ/output_<patch>_by_tier`
-  - `soloq-parsed`: CSV + Parquet parsed dataset in `SoloQ/data/`
-
-- **Pro workflow (Oracle’s Elixir)**: **Actions → Get Pro data by Year**  https://github.com/ddori/UIUC_DataCuration/actions/workflows/get_pro_by_year.yml
-  <img width="1306" height="420" alt="image" src="https://github.com/user-attachments/assets/7344f7c2-3da2-4932-ab55-f9b9573fddca" />
-
-  **Inputs**:
-  - `year` (e.g., `2025`)
-
-  **Behavior**:
-  - Downloads the Oracle’s Elixir CSV for the given year via CI.  
-
-  **Artifacts produced**:
-  - `pro-raw-year`: the downloaded CSV for the specified year  
-
----
-
-
-## 7) Professional Data (Oracle’s Elixir)
-
-- Pro data are sourced from **Oracle’s Elixir** as CSV files (season/year).
-- In CI or locally, align schema to match SoloQ outputs.
-
----
-
-## 8) Outputs
-
-- **Raw**: `SoloQ/output_<patch>_by_tier/<TIER>/matches/*.json`
-- **Parsed tables**:
-  - `SoloQ/data/soloq_full_<patch>.csv`
-  - `SoloQ/data/soloq_full_<patch>.parquet`
-
----
-
-## 9) Local Run Example
-
-```bash
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-
-export RIOT_API_KEY=YOUR_KEY
-cd SoloQ
-python parse.py
-cd ..
-
-jupyter lab
+```
+LeagueOfLegends_Data_Curation/
+│
+├─ SoloQ/
+│   ├─ acquire.py          # Driver: collect SoloQ matches by tier
+│   ├─ collector.py        # API sampling + match/timeline download
+│   ├─ league_api.py       # League / tier listing endpoints
+│   ├─ riot_api.py         # Match, timeline, account queries
+│   ├─ http_client.py      # Rate-limit-aware HTTP client (429/5xx retry)
+│   ├─ parse.py            # Raw JSON → flat tables
+│   ├─ clean.py            # Patch filtering, metrics, normalization
+│   ├─ config.py           # API key, PATCH_MM, region, queue
+│   ├─ utils.py
+│   └─ output_<patch>_by_tier/
+│
+├─ pro/
+│   ├─ clean.py            # Clean Oracle’s Elixir CSV
+│   └─ data/               # Raw + cleaned datasets
+│
+├─ unified.py              # Build unified_pro_soloq_with_metrics.csv
+├─ app.py                  # Streamlit dashboard (SoloQ + Pro comparison)
+├─ provenance.py           # Provenance graph & metadata
+│
+├─ notebooks/
+│   ├─ soloq_analysis_visualization.ipynb
+│   ├─ pro_2025_analysis.ipynb
+│   └─ soloq_pro_comparison.ipynb
+│
+├─ requirements.txt
+└─ .github/workflows/unified_lol.yml
 ```
 
 ---
 
-## 10) Acknowledgments
-- **Riot Policies** https://developer.riotgames.com/policies/general
-- **Riot Games Developer Portal** https://developer.riotgames.com/docs/portal
-- **Oracle’s Elixir** https://oracleselixir.com/tools/downloads
+## 3. Data Sources
 
+### 3.1 SoloQ — Riot Games Developer API
 
+SoloQ data is collected directly from Riot API.
 
+**How to get a Riot API key**
+1. Visit official Riot Developer Portal:  
+   https://developer.riotgames.com/
+2. Create an account (or login)
+3. Generate a **Personal API Key** (RGAPI-xxxx-xxxx)
+4. Set as environment variable:
+
+```
+export RIOT_API_KEY="RGAPI-xxxxxxxx-xxxxxxxx"
+```
+
+The pipeline uses:
+- **RANKED_SOLO_5x5 (Queue ID: 420)**
+- **Platform: KR**
+- **Tier sampling → match → timeline**
+
+---
+
+### 3.2 Pro — Oracle’s Elixir (Google Drive)
+
+Professional match data (2025 season) is taken from Oracle’s Elixir CSV.
+
+In CI (GitHub Actions), it is downloaded from a **prepared Google Drive folder**:
+
+> **Allowed Pro data folder:**  
+> https://drive.google.com/drive/u/1/folders/1gLSw0RLjBbtaNy0dgnGQDAZOHIgCe-HH
+
+**IMPORTANT:**  
+When running the GitHub Actions pipeline, you must:
+1. Open the folder above  
+2. **Choose the year you want** (e.g., 2024, 2025)  
+3. **Right-click → Get link**  
+4. Paste that **specific file link** into the workflow input:
+   ```
+   pro_gdrive_url
+   ```
+
+The workflow uses `gdown --fuzzy` to download the file.
+
+---
+
+## 4. Local Usage
+
+### 4.1 Environment Setup
+
+```
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Minimum dependencies:
+```
+dotenv
+requests
+pandas
+matplotlib
+seaborn
+pyarrow
+streamlit
+prov
+pydot
+graphviz
+```
+
+---
+
+### 4.2 SoloQ Pipeline (Local)
+
+**Step 1 — Acquire raw data**
+```
+cd SoloQ
+python acquire.py
+```
+Downloads tier-wise samples under:
+```
+SoloQ/output_<PATCH_MM>_by_tier/
+```
+
+**Step 2 — Parse JSON → tables**
+```
+python parse.py
+```
+Produces:
+```
+SoloQ/data/soloq_full_<PATCH_MM>.csv
+SoloQ/data/soloq_full_<PATCH_MM>.parquet
+```
+
+**Step 3 — Clean SoloQ**
+```
+python clean.py
+```
+Output:
+```
+SoloQ/data/soloq_clean_<PATCH_MM>.csv
+```
+
+Move back:
+```
+cd ..
+```
+
+---
+
+### 4.3 Pro Pipeline (Local)
+
+Download the CSV from Oracle’s Elixir and place it into:
+
+```
+pro/data/
+```
+
+Example:
+```
+pro/data/2025_LoL_esports_match_data_from_OraclesElixir.csv
+```
+
+Run clean:
+```
+cd pro
+python clean.py
+cd ..
+```
+
+Output:
+```
+pro/data/pro_2025_cleaned.csv
+```
+
+---
+
+### 4.4 Build Unified Dataset
+
+From project root:
+
+```
+python unified.py
+```
+
+Generates:
+```
+unified_pro_soloq_with_metrics.csv
+```
+
+This contains:
+- aligned schemas (tier, role, patch consistency)
+- derived metrics (DPM, GPM, CSPM, etc.)
+- team objective metrics
+- vision efficiency metrics
+- lane pressure metrics (normalized, abs)
+
+---
+
+### 4.5 Dashboard
+
+Run:
+```
+streamlit run app.py
+```
+
+The dashboard allows:
+- role filtering
+- tier-wise progression visualization
+- boxplot distribution by tier
+- clear SoloQ vs Pro comparison
+
+**Purpose:**  
+See how behavior **systematically changes** from IRON to PRO.
+
+---
+
+## 5. GitHub Actions Pipeline
+
+File:
+```
+.github/workflows/unified_lol.yml
+```
+
+### 5.1 Trigger
+Manual:
+```
+Actions → LoL Unified Pipeline → Run workflow
+```
+
+### 5.2 Inputs
+Required:
+- `riot_api_key` — RGAPI-xxxx key
+- `patch_mm` — e.g. 15.24
+- `pro_gdrive_url` — Link copied from the Google Drive folder above
+
+### 5.3 Job Sequence
+1. **soloq-acquire**
+2. **soloq-parse**
+3. **soloq-clean**
+4. **pro-download-clean**
+5. **unify**
+6. **app-check**
+
+Artifacts are automatically passed between jobs.
+
+Each step is independent and follows the same local logic.
+
+---
+
+## 6. Provenance & Reproducibility
+
+This project includes full **data provenance tracking** to ensure the entire dataset creation process is **transparent**, **verifiable**, and **reproducible**.
+
+### 6.1 Provenance Graph
+- `provenance.py` can generate a provenance graph following the structure of the **USGS Science Data Lifecycle**
+- The pipeline captures:
+  - **Acquisition** → Riot API sampling
+  - **Processing** → Parsing, cleaning, normalization
+  - **Analysis Preparation** → Derived metrics & schema alignment
+  - **Preservation** → Artifacts passed through GitHub Actions
+  - **Dissemination** → Final unified dataset + interactive dashboard
+
+The provenance record includes:
+- input data source URLs (Google Drive for Pro data, Riot API endpoints)
+- transformation scripts (versioned in git)
+- intermediate outputs (GitHub Actions artifacts)
+- environment dependencies (`requirements.txt`)
+- metadata consistency (tier/role/patch normalization)
+
+This enables **traceability**:
+Every value in the unified dataset can be traced back to:
+- a raw JSON file from Riot API, or
+- a row from Oracle’s Elixir CSV
+
+---
+
+## 7. Notebooks
+
+Included examples:
+
+- **SoloQ analysis**
+- **Pro-only analysis (2025)**
+- **SoloQ vs Pro comparison**  
+  (same metrics across tiers)
+
+They assume:
+- Clean SoloQ CSV
+- Clean Pro CSV
+- Unified.csv exists
+
+---
+
+## 8. Acknowledgments
+
+- **Riot Games Developer Portal**  
+  https://developer.riotgames.com/
+
+- **Riot Policies**  
+  https://developer.riotgames.com/policies/general
+
+- **Oracle’s Elixir**  
+  https://oracleselixir.com/tools/downloads
+
+This project is for **research & educational purposes**.  
+All data use must follow Riot Games API policies.
