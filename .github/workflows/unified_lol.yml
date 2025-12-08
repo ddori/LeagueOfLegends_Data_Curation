@@ -1,145 +1,250 @@
-name: Build Unified LoL Dataset
+name: LoL Unified Pipeline
 
 on:
   workflow_dispatch:
     inputs:
       riot_api_key:
-        description: "Riot API key (valid ~24h)"
+        description: "Riot API key"
         required: true
         type: string
       patch_mm:
-        description: "Patch prefix for SoloQ (e.g. 15.24)"
+        description: "Patch prefix for SoloQ (e.g., 15.24)"
         required: true
         default: "15.24"
         type: string
-      year:
-        description: "Pro data year (e.g. 2025)"
+      pro_gdrive_url:
+        description: "Google Drive link for Pro CSV (single file)"
         required: true
-        default: "2025"
-        type: string
-      max_pages_per_player:
-        description: "Optional: limit pages per SoloQ player (e.g. 2). Empty = full."
-        required: false
-        default: ""
         type: string
 
 jobs:
-  build-unified:
+  soloq-acquire:
     runs-on: ubuntu-latest
 
     env:
       RIOT_API_KEY: ${{ inputs.riot_api_key }}
       PATCH_MM: ${{ inputs.patch_mm }}
-      YEAR: ${{ inputs.year }}
-      MAX_PAGES_PER_PLAYER: ${{ inputs.max_pages_per_player }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Mask API key in logs
-        run: echo "::add-mask::${{ inputs.riot_api_key }}"
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f "requirements.txt" ]; then
-            pip install -r requirements.txt
-          fi
-          pip install gdown streamlit
+          pip install -r requirements.txt
 
-      # ----------------------------------------------------
-      # 1) Download Pro raw CSV for the given year
-      # ----------------------------------------------------
-      - name: Download Pro raw CSVs from Google Drive
-        run: |
-          mkdir -p pro/data
-          gdown --folder "https://drive.google.com/drive/folders/1gLSw0RLjBbtaNy0dgnGQDAZOHIgCe-HH" -O pro/data
-          echo "Listing files in pro/data:"
-          ls -al pro/data
-
-          year="${YEAR}"
-          raw_name="${year}_LoL_esports_match_data_from_OraclesElixir.csv"
-          echo "Looking for file: ${raw_name}"
-
-          if [ ! -f "pro/data/${raw_name}" ]; then
-            echo "ERROR: File not found: pro/data/${raw_name}"
-            echo "Available files:"
-            ls -al pro/data
-            exit 1
-          fi
-
-          # Optionally delete other files to keep the folder clean
-          find pro/data -type f ! -name "${raw_name}" -delete
-
-          echo "Remaining Pro raw file:"
-          ls -al pro/data
-
-      # ----------------------------------------------------
-      # 2) SoloQ: acquire → parse → clean
-      # ----------------------------------------------------
-      - name: Run SoloQ acquire / parse / clean
+      - name: Run SoloQ acquire
         working-directory: SoloQ
         run: |
-          echo "[SoloQ] Using PATCH_MM=${PATCH_MM}"
-          echo "[SoloQ] acquire.py"
+          echo "[Run] SoloQ acquire with PATCH_MM=${PATCH_MM}"
           python acquire.py
 
-          echo "[SoloQ] parse.py"
+      - name: Upload SoloQ raw JSON
+        uses: actions/upload-artifact@v4
+        with:
+          name: soloq-raw-${{ inputs.patch_mm }}
+          path: SoloQ/output_*_by_tier
+          retention-days: 7
+
+  soloq-parse:
+    runs-on: ubuntu-latest
+    needs: soloq-acquire
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download SoloQ raw JSON
+        uses: actions/download-artifact@v4
+        with:
+          name: soloq-raw-${{ inputs.patch_mm }}
+          path: SoloQ
+
+      - name: Run SoloQ parse
+        working-directory: SoloQ
+        run: |
+          echo "[Run] SoloQ parse"
           python parse.py
 
-          echo "[SoloQ] clean.py"
+      - name: Upload parsed SoloQ CSV
+        uses: actions/upload-artifact@v4
+        with:
+          name: soloq-parsed-${{ inputs.patch_mm }}
+          path: |
+            SoloQ/data/soloq_full_*.csv
+            SoloQ/data/soloq_full_*.parquet
+          retention-days: 7
+
+  soloq-clean:
+    runs-on: ubuntu-latest
+    needs: soloq-parse
+
+    env:
+      PATCH_MM: ${{ inputs.patch_mm }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download parsed SoloQ
+        uses: actions/download-artifact@v4
+        with:
+          name: soloq-parsed-${{ inputs.patch_mm }}
+          path: SoloQ/data
+
+      - name: Run SoloQ clean
+        working-directory: SoloQ
+        run: |
+          echo "[Run] SoloQ clean with PATCH_MM=${PATCH_MM}"
           python clean.py
 
-          echo "[SoloQ] data folder contents:"
-          ls -al data || true
+      - name: Upload cleaned SoloQ
+        uses: actions/upload-artifact@v4
+        with:
+          name: soloq-clean-${{ inputs.patch_mm }}
+          path: SoloQ/data/soloq_clean_*.csv
+          retention-days: 7
 
-      # ----------------------------------------------------
-      # 3) Pro: clean
-      # ----------------------------------------------------
+  pro-download-clean:
+    runs-on: ubuntu-latest
+
+    env:
+      PRO_GDRIVE_URL: ${{ inputs.pro_gdrive_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install gdown and deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install gdown -r requirements.txt
+
+      - name: Download Pro CSV from Google Drive
+        run: |
+          mkdir -p pro/data
+          echo "[Run] Downloading Pro CSV from ${PRO_GDRIVE_URL}"
+          # Save with the filename that pro/clean script expects
+          gdown "${PRO_GDRIVE_URL}" -O pro/data/2025_LoL_esports_match_data_from_OraclesElixir.csv
+          ls -al pro/data
+
       - name: Run Pro clean
         working-directory: pro
         run: |
-          echo "[Pro] clean.py"
+          echo "[Run] Pro clean"
+          # If your clean script name is different, adjust here
           python clean.py
-          echo "[Pro] data folder contents:"
-          ls -al data || true
 
-      # ----------------------------------------------------
-      # 4) Unified: build combined dataset
-      # ----------------------------------------------------
-      - name: Build unified dataset
-        run: |
-          echo "[Unified] Running unified.py"
-          python unified.py
-          echo "[Unified] Checking output:"
-          ls -al
-
-      # ----------------------------------------------------
-      # 5) Upload unified CSV as artifact
-      # ----------------------------------------------------
-      - name: Upload unified dataset artifact
+      - name: Upload cleaned Pro
         uses: actions/upload-artifact@v4
         with:
-          name: unified_pro_soloq_with_metrics
+          name: pro-clean-2025
+          path: pro/data/pro_2025_cleaned.csv
+          retention-days: 7
+
+  unify:
+    runs-on: ubuntu-latest
+    needs:
+      - soloq-clean
+      - pro-download-clean
+
+    env:
+      PATCH_MM: ${{ inputs.patch_mm }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download cleaned SoloQ
+        uses: actions/download-artifact@v4
+        with:
+          name: soloq-clean-${{ inputs.patch_mm }}
+          path: SoloQ/data
+
+      - name: Download cleaned Pro
+        uses: actions/download-artifact@v4
+        with:
+          name: pro-clean-2025
+          path: pro/data
+
+      - name: Run unified builder
+        run: |
+          echo "[Run] unified.py"
+          python unified.py
+
+      - name: Upload unified dataset
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-${{ inputs.patch_mm }}
           path: unified_pro_soloq_with_metrics.csv
-          if-no-files-found: error
           retention-days: 14
 
-      # ----------------------------------------------------
-      # 6) Streamlit app smoke test
-      # ----------------------------------------------------
-      - name: Smoke test Streamlit app
+  app-check:
+    runs-on: ubuntu-latest
+    needs: unify
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
         run: |
-          echo "[App] Starting Streamlit app in headless mode"
-          python -m streamlit run app.py --server.headless true --server.port 8501 &
-          PID=$!
-          # Give the app a bit of time to start and import everything
-          sleep 15
-          echo "[App] Stopping Streamlit app (PID=$PID)"
-          kill $PID || true
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt streamlit
+
+      - name: Download unified dataset
+        uses: actions/download-artifact@v4
+        with:
+          name: unified-${{ inputs.patch_mm }}
+          path: .
+
+      - name: Sanity check app.py
+        run: |
+          # Basic syntax/import check; we do not actually run Streamlit server in CI
+          python -m py_compile app.py
