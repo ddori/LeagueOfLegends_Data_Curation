@@ -26,9 +26,11 @@ jobs:
       PATCH_MM: ${{ inputs.patch_mm }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -43,7 +45,8 @@ jobs:
           echo "[Run] SoloQ acquire with PATCH_MM=${PATCH_MM}"
           python acquire.py
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload SoloQ raw JSON
+        uses: actions/upload-artifact@v4
         with:
           name: soloq-raw-${{ inputs.patch_mm }}
           path: SoloQ/output_*_by_tier
@@ -54,17 +57,21 @@ jobs:
     needs: soloq-acquire
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - run: |
+      - name: Install dependencies
+        run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - uses: actions/download-artifact@v4
+      - name: Download SoloQ raw JSON
+        uses: actions/download-artifact@v4
         with:
           name: soloq-raw-${{ inputs.patch_mm }}
           path: SoloQ
@@ -72,9 +79,11 @@ jobs:
       - name: Run SoloQ parse
         working-directory: SoloQ
         run: |
+          echo "[Run] SoloQ parse"
           python parse.py
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload parsed SoloQ CSV
+        uses: actions/upload-artifact@v4
         with:
           name: soloq-parsed-${{ inputs.patch_mm }}
           path: |
@@ -90,17 +99,21 @@ jobs:
       PATCH_MM: ${{ inputs.patch_mm }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - run: |
+      - name: Install dependencies
+        run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - uses: actions/download-artifact@v4
+      - name: Download parsed SoloQ
+        uses: actions/download-artifact@v4
         with:
           name: soloq-parsed-${{ inputs.patch_mm }}
           path: SoloQ/data
@@ -108,15 +121,17 @@ jobs:
       - name: Run SoloQ clean
         working-directory: SoloQ
         run: |
+          echo "[Run] SoloQ clean with PATCH_MM=${PATCH_MM}"
           python clean.py
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload cleaned SoloQ
+        uses: actions/upload-artifact@v4
         with:
           name: soloq-clean-${{ inputs.patch_mm }}
           path: SoloQ/data/soloq_clean_*.csv
           retention-days: 7
 
-    pro-download-clean:
+  pro-download-clean:
     runs-on: ubuntu-latest
 
     env:
@@ -140,7 +155,7 @@ jobs:
         run: |
           mkdir -p pro/data
           echo "[Run] Downloading Pro CSV from ${PRO_GDRIVE_URL}"
-          # clean.py가 기대하는 EXACT 경로/파일명으로 저장
+          # clean.py가 기대하는 파일명/경로에 딱 맞춰서 저장
           gdown --fuzzy "${PRO_GDRIVE_URL}" \
             -O pro/data/2025_LoL_esports_match_data_from_OraclesElixir.csv
           echo "==== ls pro/data ===="
@@ -150,18 +165,22 @@ jobs:
 
       - name: Validate Pro CSV header
         run: |
-          FILE=pro/data/2025_LoL_esports_match_data_from_OraclesElixir.csv
+          FILE="pro/data/2025_LoL_esports_match_data_from_OraclesElixir.csv"
           echo "[Validate] Checking if file looks like CSV: $FILE"
+
           if grep -qi "<html" "$FILE"; then
-            echo "::error::Downloaded file is HTML instead of CSV"
+            echo "::error::Downloaded file is HTML instead of CSV (check Drive sharing)"
             head -n 20 "$FILE" || true
             exit 1
           fi
-          # Oracle's Elixir 헤더 체크 (gameid, league 등)
-          if head -n 1 "$FILE" | grep -q -E "gameid,.*league,.*year"; then
-            echo "[OK] CSV header valid"
+
+          # Oracle's Elixir 헤더 대략 체크
+          HEADER="$(head -n 1 "$FILE")"
+          echo "[HEADER] $HEADER"
+          if echo "$HEADER" | grep -q -E "gameid,.*league,.*year"; then
+            echo "[OK] CSV header looks valid"
           else
-            echo "::error::CSV header looks invalid"
+            echo "::error::CSV header looks suspicious"
             head -n 5 "$FILE"
             exit 1
           fi
@@ -170,7 +189,7 @@ jobs:
         working-directory: pro
         run: |
           echo "[Run] Pro clean"
-          # clean.py 안에서 RAW_PATH = "./data/2025_LoL_esports_match_data_from_OraclesElixir.csv" 사용
+          # clean.py 안에서 RAW_PATH = "./data/2025_LoL_esports_match_data_from_OraclesElixir.csv"
           python clean.py
 
       - name: Upload cleaned Pro
@@ -190,31 +209,38 @@ jobs:
       PATCH_MM: ${{ inputs.patch_mm }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - run: |
+      - name: Install dependencies
+        run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - uses: actions/download-artifact@v4
+      - name: Download cleaned SoloQ
+        uses: actions/download-artifact@v4
         with:
           name: soloq-clean-${{ inputs.patch_mm }}
           path: SoloQ/data
 
-      - uses: actions/download-artifact@v4
+      - name: Download cleaned Pro
+        uses: actions/download-artifact@v4
         with:
           name: pro-clean-2025
           path: pro/data
 
       - name: Run unified builder
         run: |
+          echo "[Run] unified.py"
           python unified.py
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload unified dataset
+        uses: actions/upload-artifact@v4
         with:
           name: unified-${{ inputs.patch_mm }}
           path: unified_pro_soloq_with_metrics.csv
@@ -225,17 +251,21 @@ jobs:
     needs: unify
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - run: |
+      - name: Install dependencies
+        run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt streamlit
 
-      - uses: actions/download-artifact@v4
+      - name: Download unified dataset
+        uses: actions/download-artifact@v4
         with:
           name: unified-${{ inputs.patch_mm }}
           path: .
