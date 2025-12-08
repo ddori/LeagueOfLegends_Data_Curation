@@ -73,17 +73,12 @@ def load_unified(path: str = "unified_pro_soloq_with_metrics.csv") -> pd.DataFra
 def prepare_df(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
-    # tier를 ordered categorical로
     df["tier"] = df["tier"].astype(str).str.upper()
     df["tier"] = pd.Categorical(df["tier"], categories=TIER_ORDER, ordered=True)
 
-    # role 정리
     df["role"] = df["role"].fillna("UNKNOWN")
-
-    # patch 문자열화
     df["patch"] = df["patch"].astype(str)
 
-    # lane_pressure_index 절대값 사용
     if "lane_pressure_index" in df.columns:
         df["lane_pressure_index"] = df["lane_pressure_index"].astype(float).abs()
 
@@ -99,10 +94,8 @@ df_raw = load_unified()
 df = prepare_df(df_raw)
 
 if df.empty:
-    st.error("unified_pro_soloq_with_metrics.csv 에 데이터가 없습니다.")
+    st.error("No data found in unified_pro_soloq_with_metrics.csv.")
     st.stop()
-
-
 
 st.sidebar.title("⚙️ Controls")
 
@@ -118,15 +111,18 @@ if selected_roles:
     df_f = df_f[df_f["role"].isin(selected_roles)]
 
 if df_f.empty:
-    st.warning("No data")
+    st.warning("No data for the selected roles.")
     st.stop()
-
 
 # --------------------------------
 # Header & Overview
 # --------------------------------
 
 st.title("🎮 LoL Unified Dashboard (Pro + SoloQ)")
+st.markdown(
+    "This dashboard compares professional and SoloQ games. "
+    "Use it to explore how key metrics differ across tiers."
+)
 
 caption_parts = []
 caption_parts.append(f"Roles: {', '.join(selected_roles) if selected_roles else 'ALL'}")
@@ -142,9 +138,8 @@ with col3:
 
 st.markdown("---")
 
-
 # --------------------------------
-# Helper: 티어별 mean + std
+# Tier-wise mean + std
 # --------------------------------
 
 def tier_agg_mean_std(df_in: pd.DataFrame, metric: str) -> pd.DataFrame:
@@ -166,18 +161,16 @@ def tier_agg_mean_std(df_in: pd.DataFrame, metric: str) -> pd.DataFrame:
     g = g.sort_values("tier")
     return g
 
-
 # --------------------------------
-# 라인 그래프: Tier vs Metric (mean ± std)
+# Line graph: Tier vs Metric (mean ± std)
 # --------------------------------
 
-st.subheader("📈 Tier Progression)")
+st.subheader("📈 Tier Progression")
 
-# 존재하는 metric만 사용
 metrics_for_line = [m for m in LINE_METRICS if m in df_f.columns]
 
 if not metrics_for_line:
-    st.info("라인 차트에 사용할 수 있는 Metric이 없습니다.")
+    st.info("No metrics available for line charts.")
 else:
     for i, metric in enumerate(metrics_for_line):
         if i % 2 == 0:
@@ -187,7 +180,7 @@ else:
             g = tier_agg_mean_std(df_f, metric)
 
             if g.empty:
-                st.info(f"{METRIC_LABEL.get(metric, metric)}: No value.")
+                st.info(f"{METRIC_LABEL.get(metric, metric)}: No values.")
                 continue
 
             fig = px.line(
@@ -215,7 +208,7 @@ available_metrics_for_box = [
 ]
 
 if not available_metrics_for_box:
-    st.info("No metric.")
+    st.info("No metrics available for boxplots.")
 else:
     metric_box = st.selectbox(
         "Select Metric",
@@ -227,11 +220,10 @@ else:
     if df_box.empty:
         st.info(f"{METRIC_LABEL.get(metric_box, metric_box)}: No data.")
     else:
-        # ✅ 티어 순서 고정: IRON → ... → PRO
         df_box["tier"] = df_box["tier"].astype(str).str.upper()
         df_box["tier"] = pd.Categorical(
             df_box["tier"],
-            categories=TIER_ORDER,   # 전체 순서 고정
+            categories=TIER_ORDER,
             ordered=True,
         )
         df_box = df_box.sort_values("tier")
