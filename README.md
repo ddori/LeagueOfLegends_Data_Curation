@@ -5,6 +5,7 @@ A fully automated pipeline for acquiring, parsing, cleaning, and unifying **Leag
 ---
 
 ## 1. Overview
+<img width="2318" height="1171" alt="image" src="https://github.com/user-attachments/assets/cec03fa1-2120-4ff2-ba72-ef92bb7df1c8" />
 
 **Goal**  
 Provide a unified dataset that highlights how player behavior, combat patterns, economy, objective control, and vision metrics change as skill increases from SoloQ to professional play.
