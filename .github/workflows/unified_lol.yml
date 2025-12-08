@@ -96,6 +96,7 @@ jobs:
     needs: soloq-parse
 
     env:
+      RIOT_API_KEY: ${{ inputs.riot_api_key }}
       PATCH_MM: ${{ inputs.patch_mm }}
 
     steps:
@@ -206,6 +207,7 @@ jobs:
       - pro-download-clean
 
     env:
+      RIOT_API_KEY: ${{ inputs.riot_api_key }}
       PATCH_MM: ${{ inputs.patch_mm }}
 
     steps:
