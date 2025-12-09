@@ -9,3 +9,5 @@ prov
 pydot
 graphviz
 plotly
+streamlit
+numpy
