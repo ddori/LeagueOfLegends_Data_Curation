@@ -248,6 +248,8 @@ See how behavior **systematically changes** from IRON to PRO.
 
 ## 5. GitHub Actions Pipeline
 
+<img width="1942" height="1252" alt="image" src="https://github.com/user-attachments/assets/0ceda919-bf9c-47ff-b54f-ca094e014549" />
+
 File:
 ```
 .github/workflows/unified_lol.yml
